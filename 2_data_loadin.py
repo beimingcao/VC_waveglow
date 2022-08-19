@@ -3,15 +3,15 @@
 import time
 import yaml
 import os
+import glob
 import torch
 import pickle
-from database import HaskinsData_ATS
+from database import CMU_ARCTIC_VC
 from torch.utils.data import Dataset, DataLoader
 from utils.transforms import Pair_Transform_Compose
-from utils.IO_func import read_file_list, load_binary_file, array_to_binary_file, load_Haskins_ATS_data
-from utils.utils import prepare_Haskins_lists
+
 from shutil import copyfile
-from utils.transforms import padding_end, apply_EMA_MVN, zero_padding_end
+from utils.transforms import apply_delta_deltadelta_Src_Tar, apply_DTW, apply_delta_deltadelta_Src, apply_delta_deltadelta_Tar, apply_delta_deltadelta_Src_Tar
 import random
 
 ### Fix the randomness for reproduction
@@ -25,7 +25,7 @@ torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
 '''
-Further separate data into src-tar pairs, apply z-scores
+Further separate data into src-tar pairs, apply z-scores, delta, DTW, train test split
 '''
 
 if __name__ == '__main__':
@@ -37,53 +37,89 @@ if __name__ == '__main__':
     args = parser.parse_args()
     config = yaml.load(open(args.conf_dir, 'r'), Loader=yaml.FullLoader)
 
+    pair_transforms = [] # transforms applied to src-tar pairs
+
+    ####### apply delta ######
+
+    apply_delta = config['training_setup']['delta']
+    if apply_delta == True:
+        pair_transforms.append(apply_delta_deltadelta_Src_Tar())
+
+    ############### Apply DTW alignment ######
+    pair_transforms.append(apply_DTW())
+
+
     data_path = config['corpus']['path']
     src_spk_list = config['data_setup']['source_spk_list']
     tar_spk_list = config['data_setup']['target_spk_list']
+ 
+    train_val_test_ratio = config['training_setup']['train_val_test_ratio']  # [train, val, test]
 
-    train_transforms = []
-    valid_transforms = []
-    test_transforms = []
+    input_norm = config['training_setup']['normalization']['input']
+    output_norm = config['training_setup']['normalization']['output']
 
-    exp_train_lists, exp_valid_lists, exp_test_lists = prepare_Haskins_lists(args)
+    pt_data_path = os.path.join(args.buff_dir, 'data')
 
-    for i in range(len(exp_test_lists)):
-  #      CV = 'CV' + format(i, '02d')
-        CV = exp_test_lists[i][0][:3]
-        CV_data_dir = os.path.join(prepared_data_CV_path, CV)
-        if not os.path.exists(CV_data_dir):
-            os.makedirs(CV_data_dir)
+    for tar_spk in tar_spk_list:
+        src_spk_unique = src_spk_list.copy()
+        src_spk_unique.remove(tar_spk)
+        for src_spk in src_spk_unique:
+            sub_exp_id = src_spk + '_vc_' + tar_spk
+            sub_exp_folder = os.path.join(args.buff_dir, sub_exp_id)
+            if not os.path.exists(sub_exp_folder):
+                os.makedirs(sub_exp_folder)
 
-        train_list = exp_train_lists[i]
-        valid_list = exp_valid_lists[i]
-        test_list = exp_test_lists[i]
+            src_pt_folder = os.path.join(pt_data_path, src_spk)
+            tar_pt_folder = os.path.join(pt_data_path, tar_spk)
 
-        train_dataset = HaskinsData_ATS(prepared_data_path, train_list, ema_dim)
-        if MVN == True:
-            EMA_mean, EMA_std = train_dataset.compute_ema_mean_std()
-            train_transforms.append(apply_EMA_MVN(EMA_mean, EMA_std))
-            valid_transforms.append(apply_EMA_MVN(EMA_mean, EMA_std))
-            test_transforms.append(apply_EMA_MVN(EMA_mean, EMA_std))
+            src_pt_list, tar_pt_list = glob.glob(src_pt_folder + '/*.pt'), glob.glob(tar_pt_folder + '/*.pt')
+            src_id_list = [os.path.basename(x)[:-3] for x in src_pt_list]
+            tar_id_list = [os.path.basename(x)[:-3] for x in tar_pt_list]
 
-        if batch_size > 1:
-            valid_dataset = HaskinsData_ATS(prepared_data_path, valid_list, ema_dim)
-  #          max_len = max(train_dataset.find_max_len(), valid_dataset.find_max_len())
-            max_len = 340
-  #          train_transforms.append(padding_end(max_len))
-  #          valid_transforms.append(padding_end(max_len))    
-            train_transforms.append(zero_padding_end(max_len))
-            valid_transforms.append(zero_padding_end(max_len))
+            #### find common parallel samples from src and tar speakers
+            
+            common_id_list = []
+            for s_id in src_id_list:
+                if s_id in tar_id_list:
+                    common_id_list.append(s_id)
+            print('Speaker ' + src_spk + ' and ' + tar_spk + ' has ' + str(len(common_id_list)) + ' parallel samples')
 
-        train_dataset = HaskinsData_ATS(prepared_data_path, train_list, ema_dim, transforms = Pair_Transform_Compose(train_transforms))
-        valid_dataset = HaskinsData_ATS(prepared_data_path, valid_list, ema_dim, transforms = Pair_Transform_Compose(valid_transforms))
-        test_dataset = HaskinsData_ATS(prepared_data_path, test_list, ema_dim, transforms = Pair_Transform_Compose(test_transforms))
+            sample_num = len(common_id_list)
 
-        train_pkl_path = os.path.join(CV_data_dir, 'train_data.pkl')
-        tr = open(train_pkl_path, 'wb')
-        pickle.dump(train_dataset, tr)
-        valid_pkl_path = os.path.join(CV_data_dir, 'valid_data.pkl')
-        va = open(valid_pkl_path, 'wb')
-        pickle.dump(valid_dataset, va)
-        test_pkl_path = os.path.join(CV_data_dir, 'test_data.pkl')
-        te = open(test_pkl_path, 'wb')
-        pickle.dump(test_dataset, te)
+            train_id_list = common_id_list[0:int(sample_num*train_val_test_ratio[0])]
+            valid_id_list = common_id_list[int(sample_num*train_val_test_ratio[0]):int(sample_num*(train_val_test_ratio[0]+train_val_test_ratio[1]))]
+            test_id_list = common_id_list[int(sample_num*(train_val_test_ratio[0]+train_val_test_ratio[1])):sample_num]
+  
+            train_transforms = pair_transforms
+            valid_transforms = pair_transforms
+            test_transforms = pair_transforms
+
+            ### apply_normalization
+
+            if input_norm == True or output_norm == True:
+                train_dataset = CMU_ARCTIC_VC(pt_data_path, train_id_list, src_spk, tar_spk)
+                src_mean, src_std, tar_mean, tar_std  = train_dataset.compute_mean_std()
+
+                if input_norm == True:              
+                    train_transforms.append(apply_delta_deltadelta_Src(src_mean, src_std))
+                    valid_transforms.append(apply_delta_deltadelta_Src(src_mean, src_std))
+                    test_transforms.append(apply_delta_deltadelta_Src(src_mean, src_std))
+                if output_norm == True:
+                    train_transforms.append(apply_delta_deltadelta_Tar(tar_mean, tar_std))
+                    valid_transforms.append(apply_delta_deltadelta_Tar(tar_mean, tar_std))
+                    torch.save(tar_mean, os.path.join(sub_exp_folder, 'tar_mean.pt'))
+                    torch.save(tar_std, os.path.join(sub_exp_folder, 'tar_std.pt'))
+
+            train_dataset = CMU_ARCTIC_VC(pt_data_path, train_id_list, src_spk, tar_spk, transforms=train_transforms)
+            valid_dataset = CMU_ARCTIC_VC(pt_data_path, valid_id_list, src_spk, tar_spk, transforms=valid_transforms)
+            test_dataset = CMU_ARCTIC_VC(pt_data_path, test_id_list, src_spk, tar_spk, transforms=test_transforms)    
+
+            train_pkl_path = os.path.join(sub_exp_folder, 'train_data.pkl')
+            tr = open(train_pkl_path, 'wb')
+            pickle.dump(train_dataset, tr)
+            valid_pkl_path = os.path.join(sub_exp_folder, 'valid_data.pkl')
+            va = open(valid_pkl_path, 'wb')
+            pickle.dump(valid_dataset, va)
+            test_pkl_path = os.path.join(sub_exp_folder, 'test_data.pkl')
+            te = open(test_pkl_path, 'wb')
+            pickle.dump(test_dataset, te)

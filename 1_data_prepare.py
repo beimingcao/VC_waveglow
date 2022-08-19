@@ -37,20 +37,6 @@ def data_processing(args):
     src_spk_list = config['data_setup']['source_spk_list']
     tar_spk_list = config['data_setup']['target_spk_list']
 
-    #### Apply delta to input or/and output acoustic features
-
-  #  input_delta = config['training_setup']['delta']['input']
-  #  output_delta = config['training_setup']['delta']['output']
-
-  #  if input_delta == True:
-  #      transform.append(apply_delta_deltadelta_Src)
-  #  if output_delta == True:
-  #      transform.append(apply_delta_deltadelta_Tar)
-
-    ############### Apply DTW alignment ######
-  #  transforms.append(apply_DTW())
-
-
     ################ Acoustic feature extraction #################
     sampling_rate = config['acoustic_feature']['sampling_rate']
     filter_length = config['acoustic_feature']['filter_length']

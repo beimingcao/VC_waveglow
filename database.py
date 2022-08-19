@@ -9,20 +9,22 @@ import librosa
 
 
 class CMU_ARCTIC_VC(Dataset):
-    def __init__(self, data_path, spk_list, src_spk, tar_spk, transforms=None):
+    def __init__(self, data_path, data_id_list, src_spk, tar_spk, transforms=None):
 
         '''
         data_path: path of 'cmu_arctic' folder
-        id_list:   file_ids for this dataset, e.g., ['arctic_a0001', 'arctic_a0002']
+        data_id_list:   file_ids for this dataset, e.g., ['arctic_a0001', 'arctic_a0002']
         src_spk: source speaker, e.g., 'aew'
         tar_spk: target speaker, e.g., 'ahw'
-        transform: a list of composed function to transform the data, e.g. feature extraction, change_sampling_rate
+        transform: a list of composed function to transform the data, e.g. DTW
         
         '''
         self.data_path = data_path
         self.src_spk = src_spk
         self.tar_spk = tar_spk
         self.transforms = transforms
+
+        
 
     def compute_mean_std(self):
         idx = 0

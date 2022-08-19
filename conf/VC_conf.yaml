@@ -23,15 +23,14 @@ training_setup:
   normalization:
     input: True
     output: True
-  delta:
-    input: True
-    output: True
+  delta: True
+  train_val_test_ratio: [0.8, 0.1, 0.1] # train ratio, valid ratio, test_ratio
 
   NN: 'LSTM' # DNN, LSTM, BLSTM
   NN_setup:
     hidden_size: 256
     layer_num: 3
-    batch_size: 1
+    batch_size: 4
     learning_rate: 0.0003
     weight_decay: 0.000
     num_epoch: 50
