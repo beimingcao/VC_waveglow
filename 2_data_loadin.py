@@ -6,12 +6,12 @@ import os
 import glob
 import torch
 import pickle
-from database import CMU_ARCTIC_VC
+from utils.database import CMU_ARCTIC_VC
 from torch.utils.data import Dataset, DataLoader
 from utils.transforms import Pair_Transform_Compose
 
 from shutil import copyfile
-from utils.transforms import apply_delta_deltadelta_Src_Tar, apply_DTW, apply_delta_deltadelta_Src, apply_delta_deltadelta_Tar, apply_delta_deltadelta_Src_Tar
+from utils.transforms import apply_DTW, apply_src_MVN, apply_tar_MVN, apply_delta_deltadelta_Src_Tar
 import random
 
 ### Fix the randomness for reproduction
@@ -25,7 +25,7 @@ torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
 '''
-Further separate data into src-tar pairs, apply z-scores, delta, DTW, train test split
+Further separate data into src-tar pairs, apply z-scores, DTW, train test split
 '''
 
 if __name__ == '__main__':
@@ -38,12 +38,6 @@ if __name__ == '__main__':
     config = yaml.load(open(args.conf_dir, 'r'), Loader=yaml.FullLoader)
 
     pair_transforms = [] # transforms applied to src-tar pairs
-
-    ####### apply delta ######
-
-    apply_delta = config['training_setup']['delta']
-    if apply_delta == True:
-        pair_transforms.append(apply_delta_deltadelta_Src_Tar())
 
     ############### Apply DTW alignment ######
     pair_transforms.append(apply_DTW())
@@ -101,18 +95,18 @@ if __name__ == '__main__':
                 src_mean, src_std, tar_mean, tar_std  = train_dataset.compute_mean_std()
 
                 if input_norm == True:              
-                    train_transforms.append(apply_delta_deltadelta_Src(src_mean, src_std))
-                    valid_transforms.append(apply_delta_deltadelta_Src(src_mean, src_std))
-                    test_transforms.append(apply_delta_deltadelta_Src(src_mean, src_std))
+                    train_transforms.append(apply_src_MVN(src_mean, src_std))
+                    valid_transforms.append(apply_src_MVN(src_mean, src_std))
+                    test_transforms.append(apply_src_MVN(src_mean, src_std))
                 if output_norm == True:
-                    train_transforms.append(apply_delta_deltadelta_Tar(tar_mean, tar_std))
-                    valid_transforms.append(apply_delta_deltadelta_Tar(tar_mean, tar_std))
+                    train_transforms.append(apply_tar_MVN(tar_mean, tar_std))
+                    valid_transforms.append(apply_tar_MVN(tar_mean, tar_std))
                     torch.save(tar_mean, os.path.join(sub_exp_folder, 'tar_mean.pt'))
                     torch.save(tar_std, os.path.join(sub_exp_folder, 'tar_std.pt'))
 
-            train_dataset = CMU_ARCTIC_VC(pt_data_path, train_id_list, src_spk, tar_spk, transforms=train_transforms)
-            valid_dataset = CMU_ARCTIC_VC(pt_data_path, valid_id_list, src_spk, tar_spk, transforms=valid_transforms)
-            test_dataset = CMU_ARCTIC_VC(pt_data_path, test_id_list, src_spk, tar_spk, transforms=test_transforms)    
+            train_dataset = CMU_ARCTIC_VC(pt_data_path, train_id_list, src_spk, tar_spk, transforms=Pair_Transform_Compose(train_transforms))
+            valid_dataset = CMU_ARCTIC_VC(pt_data_path, valid_id_list, src_spk, tar_spk, transforms=Pair_Transform_Compose(valid_transforms))
+            test_dataset = CMU_ARCTIC_VC(pt_data_path, test_id_list, src_spk, tar_spk, transforms=Pair_Transform_Compose(test_transforms))    
 
             train_pkl_path = os.path.join(sub_exp_folder, 'train_data.pkl')
             tr = open(train_pkl_path, 'wb')

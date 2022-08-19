@@ -24,7 +24,18 @@ class CMU_ARCTIC_VC(Dataset):
         self.tar_spk = tar_spk
         self.transforms = transforms
 
-        
+        self.data = []
+        for data_id in data_id_list:
+
+            src_wav_path = os.path.join(os.path.join(self.data_path, self.src_spk), data_id + '.pt')
+            tar_wav_path = os.path.join(os.path.join(self.data_path, self.tar_spk), data_id + '.pt')
+            src_mel = torch.load(src_wav_path)
+            tar_mel = torch.load(tar_wav_path)
+
+            self.data.append((src_mel, tar_mel))
+
+       
+             
 
     def compute_mean_std(self):
         idx = 0
@@ -42,10 +53,9 @@ class CMU_ARCTIC_VC(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-
-        src, tar = self.data[idx]     
+        src, tar = self.data[idx]    
         if self.transforms is not None:
-            src, tar = self.transforms(src, tar)         
+            src, tar = self.transforms(src, tar)       
         return (src, tar)
 
 

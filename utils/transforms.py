@@ -58,9 +58,9 @@ class apply_delta_deltadelta(object):
                    (1, 1, np.array([-0.5, 0.0, 0.5])),
                    (1, 1, np.array([1.0, -2.0, 1.0]))]
         
-        ema_delta = self.apply_delta_windows(ema, windows)
+        ema_delta = self.apply_delta_windows(ema.numpy(), windows)
         
-        return ema_delta
+        return torch.FloatTensor(ema_delta)
 
 
 class apply_delta_deltadelta_Src(apply_delta_deltadelta):
@@ -84,9 +84,9 @@ class apply_DTW(object):
         import numpy as np
         dist, path = fastdtw(src, tar)
         src, tar= src.unsqueeze(0), tar.unsqueeze(0)
-        src_align, tar_align = DTWAligner().transform(src, tar)
+        src_align, tar_align = DTWAligner().transform((src.numpy(), tar.numpy()))
 
-        return src_align.squeeze(0), tar_align.squeeze(1)
+        return torch.FloatTensor(src_align.squeeze(0)), torch.FloatTensor(tar_align.squeeze(0))
     
     def __call__(self, src, tar):
     
@@ -197,10 +197,18 @@ class zero_padding_end(object):
         ema_padded, wav_padded = torch.cat((ema_tensor, ema_pad), dim = 0), torch.cat((wav, wav_pad), dim = 0)
         return ema_padded, wav_padded
 
-class apply_EMA_MVN(object):
+class apply_src_MVN(object):
     def __init__(self, X_mean, X_std):
         self.X_mean = X_mean
         self.X_std = X_std
     def __call__(self, X, Y):
         X_norm = (X - self.X_mean)/self.X_std
         return X_norm, Y
+
+class apply_tar_MVN(object):
+    def __init__(self, Y_mean, Y_std):
+        self.Y_mean = Y_mean
+        self.Y_std = Y_std
+    def __call__(self, X, Y):
+        Y_norm = (Y - self.Y_mean)/self.Y_std
+        return X, Y_norm
