@@ -1,0 +1,5 @@
+epoch 0   	 acc = nan 	 val acc = 9.412
+epoch 1   	 acc = nan 	 val acc = 9.050
+epoch 2   	 acc = nan 	 val acc = 8.688
+epoch 3   	 acc = nan 	 val acc = 8.677
+epoch 4   	 acc = nan 	 val acc = 8.557

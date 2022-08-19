@@ -32,14 +32,12 @@ class CMU_ARCTIC_VC(Dataset):
             src_mel = torch.load(src_wav_path)
             tar_mel = torch.load(tar_wav_path)
 
-            self.data.append((src_mel, tar_mel))
-
-       
-             
+            self.data.append((data_id, src_mel, tar_mel))
+           
 
     def compute_mean_std(self):
         idx = 0
-        for src, tar in self.data:                        
+        for fid, src, tar in self.data:                        
             if idx == 0:
                 src_all, tar_all = src, tar
             else:
@@ -53,10 +51,10 @@ class CMU_ARCTIC_VC(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        src, tar = self.data[idx]    
+        data_id, src, tar = self.data[idx]    
         if self.transforms is not None:
             src, tar = self.transforms(src, tar)       
-        return (src, tar)
+        return (data_id, src, tar)
 
 
 

@@ -25,14 +25,14 @@ training_setup:
     output: True
   train_val_test_ratio: [0.8, 0.1, 0.1] # train ratio, valid ratio, test_ratio
 
-NN: 'LSTM' # DNN, LSTM, BLSTM
+NN: 'LSTM' # LSTM, BLSTM
 NN_setup:
-  hidden_size: 256
+  hidden_size: 128
   layer_num: 3
   batch_size: 4
-  learning_rate: 0.0003
+  learning_rate: 0.0005
   weight_decay: 0.000
-  num_epoch: 50
+  num_epoch: 5
 
 testing_setup:
   save_model: True

@@ -69,7 +69,7 @@ def train_LSTM(args):
                 for epoch in range(num_epoch):
                     model.train()
                     acc_vals = []
-                    for x, y in train_data:
+                    for file_id, x, y in train_data:
                         x, y = x.type(torch.FloatTensor).to(device), y.type(torch.FloatTensor).to(device)
                         h, c = model.init_hidden(x)
                         h, c = h.to(device), c.to(device)
@@ -86,7 +86,7 @@ def train_LSTM(args):
 
                     model.eval()
                     acc_vals = []
-                    for x, y in valid_data:
+                    for file_id, x, y in valid_data:
                         x, y = x.type(torch.FloatTensor).to(device), y.type(torch.FloatTensor).to(device)
                         h, c = model.init_hidden(x)
                         h, c = h.to(device), c.to(device)
@@ -97,8 +97,7 @@ def train_LSTM(args):
                     print('epoch %-3d \t acc = %0.3f \t val acc = %0.3f' % (epoch, avg_acc, avg_vacc))
                     print('epoch %-3d \t acc = %0.3f \t val acc = %0.3f' % (epoch, avg_acc, avg_vacc), file = r)
 
-                    model_out_folder = os.path.join(sub_exp_folder, 'trained_models')
-                    save_model(model, os.path.join(model_out_folder, sub_exp_id + '_lstm'))
+                    save_model(model, os.path.join(sub_exp_folder, sub_exp_id + '_lstm'))
             r.close()
             print('Training for ' + sub_exp_id + ' is done.')
 

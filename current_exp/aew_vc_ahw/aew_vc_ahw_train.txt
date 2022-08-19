@@ -1,0 +1,5 @@
+epoch 0   	 acc = 5.328 	 val acc = 4.855
+epoch 1   	 acc = 4.121 	 val acc = 3.813
+epoch 2   	 acc = 3.658 	 val acc = 2.399
+epoch 3   	 acc = 2.444 	 val acc = 2.400
+epoch 4   	 acc = 2.447 	 val acc = 2.320
