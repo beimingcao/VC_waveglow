@@ -37,17 +37,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     config = yaml.load(open(args.conf_dir, 'r'), Loader=yaml.FullLoader)
 
-    sel_sensors = config['articulatory_data']['sel_sensors']
-    sel_dim = config['articulatory_data']['sel_dim'] 
-    delta = config['articulatory_data']['delta']
-    d = 3 if delta == True else 1
-    ema_dim = len(sel_sensors)*len(sel_dim)*d
-
-    prepared_data_path = os.path.join(args.buff_dir, 'data')
-    prepared_data_CV_path = os.path.join(args.buff_dir, 'data_CV')
-
-    MVN = config['articulatory_data']['MVN']
-    batch_size = config['training_setup']['batch_size']
+    data_path = config['corpus']['path']
+    src_spk_list = config['data_setup']['source_spk_list']
+    tar_spk_list = config['data_setup']['target_spk_list']
 
     train_transforms = []
     valid_transforms = []
