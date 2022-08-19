@@ -9,7 +9,7 @@ import librosa
 
 
 class CMU_ARCTIC_VC(Dataset):
-    def __init__(self, data_path, id_list, src_spk, tar_spk, transforms=None):
+    def __init__(self, data_path, spk_list, src_spk, tar_spk, transforms=None):
 
         '''
         data_path: path of 'cmu_arctic' folder
@@ -24,15 +24,27 @@ class CMU_ARCTIC_VC(Dataset):
         self.tar_spk = tar_spk
         self.transforms = transforms
 
+    def compute_mean_std(self):
+        idx = 0
+        for src, tar in self.data:                        
+            if idx == 0:
+                src_all, tar_all = src, tar
+            else:
+                src_all, tar_all = torch.cat((src_all, src), axis = 0), torch.cat((tar_all, tar), axis = 0)
+            idx += 1                        
+        src_mean, src_std = torch.std_mean(src_all, axis = 0)
+        tar_mean, tar_std = torch.std_mean(tar_all, axis = 0)
+        return src_mean, src_std, tar_mean, tar_std 
+
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
 
-        file_id, EMA, WAV = self.data[idx]     
+        src, tar = self.data[idx]     
         if self.transforms is not None:
-            EMA, WAV = self.transforms(EMA, WAV)         
-        return (file_id, EMA, WAV)
+            src, tar = self.transforms(src, tar)         
+        return (src, tar)
 
 
 

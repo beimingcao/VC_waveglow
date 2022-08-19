@@ -1,5 +1,4 @@
 import numpy as np
-import librosa
 import torch
 from nnmnkwii.preprocessing.alignment import DTWAligner
 

@@ -32,7 +32,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--conf_dir', default = 'conf/ATS_conf.yaml')
+    parser.add_argument('--conf_dir', default = 'conf/VC_conf.yaml')
     parser.add_argument('--buff_dir', default = 'current_exp')
     args = parser.parse_args()
     config = yaml.load(open(args.conf_dir, 'r'), Loader=yaml.FullLoader)

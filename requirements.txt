@@ -1,1 +1,6 @@
 pyyaml
+nnmnkwii
+scipy
+torch
+torchvision
+torchaudio
