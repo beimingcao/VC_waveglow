@@ -2,11 +2,12 @@
 import time
 import yaml
 import os
+import glob
 import torch
 from utils.IO_func import read_file_list
 from shutil import copyfile
 from utils.transforms import Transform_Compose, Pair_Transform_Compose
-from utils.transforms import pair_change_wav_sampling_rate, apply_delta_deltadelta_Src, apply_delta_deltadelta_Tar, apply_delta_deltadelta_Src_Tar, pair_wav2melspec, apply_DTW
+from utils.transforms import change_wav_sampling_rate, apply_delta_deltadelta_Src, apply_delta_deltadelta_Tar, apply_delta_deltadelta_Src_Tar, wav2melspec, apply_DTW
 from scipy.io.wavfile import read
 from database import CMU_ARCTIC_VC
 
@@ -29,13 +30,12 @@ def data_processing(args):
     #### 16000 works to but needs to change other feature setups, and quality might be lower
 
     fs_change = change_wav_sampling_rate(16000, 22050)
-    transform.append(fs_change)
+    transforms.append(fs_change)
     #####################################################
 
     data_path = config['corpus']['path']
-    fileset_path = os.path.join(data_path, 'filesets')
-    src_spk_list = config['data_setup']['src_spk_list']
-    tar_spk_list = config['data_setup']['tar_spk_list']
+    src_spk_list = config['data_setup']['source_spk_list']
+    tar_spk_list = config['data_setup']['target_spk_list']
 
     #### Apply delta to input or/and output acoustic features
 
@@ -69,25 +69,24 @@ def data_processing(args):
 
     ############### Load in wav from all speakers involved ###
 
-    all_SPK = list(set(src_spk_list, tar_spk_list))
+    all_SPK = list(set(src_spk_list + tar_spk_list))
     
-    for SPK in all_list:
+    for SPK in all_SPK:
         out_folder_SPK = os.path.join(out_folder, SPK)
         if not os.path.exists(out_folder_SPK):
             os.makedirs(out_folder_SPK)
 
-        fileset_path_SPK = os.path.join(fileset_path, SPK)
-        print(fileset_path_SPK)
+        SPK_folder = os.path.join(data_path, 'cmu_us_' + SPK + '_arctic')
+        SPK_wav_folder = os.path.join(SPK_folder, 'wav')
+        SPK_wav_list = glob.glob(SPK_wav_folder + '/*.wav')        
 
-        for file_id in file_id_list:
-            data_path_spk = os.path.join(data_path, file_id[:3])
-            mat_path = os.path.join(data_path_spk, 'data/'+ file_id + '.mat')
-            EMA, WAV, fs_ema, fs_wav = load_Haskins_ATS_data(mat_path, file_id, sel_sensors, sel_dim)
-            EMA, WAV = transforms_all(EMA, WAV) 
+        for wav_path in SPK_wav_list:
+            wav_id = os.path.basename(wav_path)[:-4]      
+            fs, wav = read(wav_path)
+            wav_pt = transforms_all(wav) 
 
-            WAV_out_dir = os.path.join(out_folder_SPK, file_id + '.pt')
-
-            torch.save(WAV, WAV_out_dir)
+            wav_out_dir = os.path.join(out_folder_SPK, wav_id + '.pt')
+            torch.save(wav_pt, wav_out_dir)
  
             
 

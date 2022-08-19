@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 from nnmnkwii.preprocessing.alignment import DTWAligner
+from utils.audio_processing import layers
+
 
 class Transform_Compose(object):
     def __init__(self, transforms):
@@ -101,7 +103,7 @@ class change_wav_sampling_rate(object):
     
     def __call__(self, wav):
         import librosa
-        y_out = np.expand_dims(librosa.resample(wav[:,0], self.org_fs, self.tar_fs), axis = 1)
+        y_out = np.expand_dims(librosa.resample(wav.astype(float), self.org_fs, self.tar_fs), axis = 1)
         return y_out
 
 class pair_change_wav_sampling_rate(object):
@@ -118,15 +120,14 @@ class pair_change_wav_sampling_rate(object):
 class wav2melspec(object):
     def __init__(self, sampling_rate=22050, filter_length=1024, hop_length=256, win_length=1024, 
                  n_mel_channels=80, mel_fmin=0.0, mel_fmax=8000.0):
-        import audio_processing.layers
-        import torch
+
         self.sampling_rate = sampling_rate
         self.filter_length = filter_length
         self.hop_length = hop_length
         self.win_length = win_length
         self.n_mel_channels = n_mel_channels
         self.mel_fmin, self.mel_fmax = mel_fmin, mel_fmax
-        self.stft = audio_processing.layers.TacotronSTFT(self.filter_length, self.hop_length, self.win_length,
+        self.stft = layers.TacotronSTFT(self.filter_length, self.hop_length, self.win_length,
                     self.n_mel_channels, self.sampling_rate, self.mel_fmin, self.mel_fmax)
     
     def __call__(self, wav):
@@ -151,9 +152,6 @@ class apply_delta_deltadelta_EMA_ATS(apply_delta_deltadelta):
     def __call__(self, ema, wav):        
         return super().__call__(ema), wav
 
-class ProcrustesMatching_ATS(ProcrustesMatching):
-    def __call__(self, ema, wav):        
-        return super().__call__(ema), wav
 
 class change_wav_sampling_rate_ATS(change_wav_sampling_rate):  
     def __call__(self, ema, wav):        
